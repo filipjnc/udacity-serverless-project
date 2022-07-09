@@ -6,6 +6,7 @@ plugins:
   - serverless-webpack
   - serverless-iam-roles-per-function
   - serverless-plugin-tracing
+  - serverless-reqvalidator-plugin
 
 provider:
   name: aws
@@ -41,6 +42,21 @@ provider:
             - xray:PutTraceSegments
           Resource: '*'
 
+custom:
+  documentation:
+    api:
+      info:
+        version: V1.0.0
+        title: Udagram Serverless Todo App API
+        description: backend API of aerverless application for images sharing
+    models:
+      - name: CreateTodoModel
+        contentType: application/json
+        schema: ${file(models/create-todo-model.json)}
+      - name: UpdateTodoModel
+        contentType: application/json
+        schema: ${file(models/update-todo-model.json)}
+
 functions:
   Auth:
     handler: src/lambda/auth/auth0Authorizer.handler
@@ -69,6 +85,7 @@ functions:
           path: todos
           cors: true
           authorizer: Auth
+
           request:
             schemas:
               application/json: ${file(models/create-todo-model.json)}
@@ -144,6 +161,15 @@ resources:
         ResponseType: DEFAULT_4XX
         RestApiId:
           Ref: ApiGatewayRestApi
+
+    RequestBodyValidator:
+      Type: AWS::ApiGateway::RequestValidator
+      Properties:
+        Name: 'request-body-validator'
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        ValidateRequestBody: true
+        ValidateRequestParameters: false
 
     TodosTable:
       Type: AWS::DynamoDB::Table
