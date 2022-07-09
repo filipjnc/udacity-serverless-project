@@ -1,26 +1,34 @@
 import 'source-map-support/register'
 
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
-import * as middy from 'middy'
-import { cors, httpErrorHandler } from 'middy/middlewares'
+const middy = require('middy')
+const middyMiddlewares = require('middy/middlewares')
+const { cors, httpErrorHandler } = middyMiddlewares
 
-import { createAttachmentPresignedUrl } from '../../businessLogic/todos'
-import { getUserId } from '../utils'
+import * as todos from '../../businessLogic/todos'
+import { getJWT } from '../utils'
 
-export const handler = middy(
-  async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    const todoId = event.pathParameters.todoId
-    // TODO: Return a presigned URL to upload a file for a TODO item with the provided id
-    
-
-    return undefined
+export const handler = middy(async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  const todoId = event.pathParameters.todoId
+  const jwtToken = getJWT(event)
+  try {
+    const uploadUrl = await todos.createAttachmentUploadUrl(jwtToken, todoId)
+    return {
+      statusCode: 201,
+      body: JSON.stringify({
+        uploadUrl
+      })
+    }
+  } catch (err) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify(err)
+    }
   }
-)
+})
 
-handler
-  .use(httpErrorHandler())
-  .use(
-    cors({
-      credentials: true
-    })
-  )
+handler.use(httpErrorHandler()).use(
+  cors({
+    credentials: true
+  })
+)
